@@ -759,25 +759,24 @@
       transition: all 0.05s ease;
     }
     .btn:disabled {
-      background-color: var(--disabled-color);
       cursor: not-allowed;
       transform: translateY(1px);      /* 음각 효과 */
+      filter: grayscale(40%) brightness(95%);  /* 모든 버튼에 동일한 회색조와 밝기 감소 적용 */
+      opacity: 0.7;                   /* 모든 버튼에 동일한 투명도 적용 */
       box-shadow:
         0 0 0 1px rgba(0,0,0,0.1),
         0 1px 0 rgba(0,0,0,0.1),
-        0 2px 0 #aaa,              /* 줄어든 그림자 */
-        0 0 3px rgba(0,0,0,0.1);
-      opacity: 0.7;                   /* 투명도 추가 */
-      filter: grayscale(40%);        /* 그레이스케일 적용 */
-      text-shadow: none;              /* 텍스트 그림자 제거 */
+        0 2px 0 rgba(0,0,0,0.1);    /* 그림자 효과 감소 */
+      text-shadow: none;             /* 텍스트 그림자 제거 */
+      transition: all 0.2s ease;     /* 부드러운 전환 효과 */
     }
     .btn:disabled:hover {
-      transform: translateY(1px);     /* hover 효과 제거 */
+      transform: translateY(1px);    /* hover 효과 제거 */
       box-shadow:
         0 0 0 1px rgba(0,0,0,0.1),
         0 1px 0 rgba(0,0,0,0.1),
-        0 2px 0 #aaa,
-        0 0 3px rgba(0,0,0,0.1);
+        0 2px 0 rgba(0,0,0,0.1);    /* hover 시에도 동일한 그림자 유지 */
+      filter: grayscale(40%) brightness(95%);  /* hover 시에도 동일한 효과 유지 */
     }
     #startButton {
       background-color: var(--start-button-color);
@@ -1463,14 +1462,6 @@
           <div class="info-label">현재 점수</div>
           <div class="info-value" id="currentScore">0</div>
         </div>
-        <div class="info-item">
-          <div class="info-label">남은 기회</div>
-          <div class="chances-container">
-            <div class="chance-indicator" id="chance1"></div>
-            <div class="chance-indicator" id="chance2"></div>
-            <div class="chance-indicator" id="chance3"></div>
-          </div>
-        </div>
       </div>
       <div class="question-container" id="questionContainer">
         <div class="passage" id="passage"></div>
@@ -1514,7 +1505,7 @@
   <script type="text/javascript" id="MathJax-script" async
     src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
   </script>
-  <script>
+ <script>
   /* 텍스트 설정 */
   const START_SCREEN_TITLE = "이름을 입력하고 게임을 시작하세요";  /* 시작 화면 제목 */
   const PLAYER_NAME_PLACEHOLDER = "이름을 입력하세요";           /* 이름 입력 필드 플레이스홀더 */
@@ -1548,7 +1539,6 @@
   let completedQuestions = 0;   /* 완료된 문제 수 */
   let selectedOptions = [];     /* 선택된 객관식 옵션들(복수선택) */
   let player = "";              /* 플레이어 이름 */
-  let remainingChances = 3;     /* 남은 기회 수 */
 
   /* DOM 요소 참조 (최상단에 선언하여 이후 코드에서 안전하게 사용) */
   const elements = {
@@ -1576,10 +1566,9 @@
     progressBar: document.getElementById('progressBar'),
     progressIndicator: document.getElementById('progressIndicator'),
     loadingSpinner: document.getElementById('loadingSpinner'),
-    chance1: document.getElementById('chance1'),
-    chance2: document.getElementById('chance2'),
-    chance3: document.getElementById('chance3'),
-    progressContainer: document.querySelector('.progress-container')
+    // --- 수정 3: 진행률 컨테이너 요소 추가 ---
+    progressContainer: document.querySelector('.progress-container') // progressBar의 부모 요소를 선택
+    // --- 수정 끝 ---
   };
 
   /* 타이머 함수 */
@@ -1615,12 +1604,10 @@
     answerSubmitted = false;
     completedQuestions = 0;
     selectedOptions = [];
-    remainingChances = 3;      /* 기회 초기화 추가 */
 
     /* UI 초기화 */
     elements.timer.textContent = "00:00";
     elements.currentScore.textContent = "0";
-    updateChancesDisplay();    /* 기회 표시 업데이트 추가 */
     updateProgressBar();
   }
 
@@ -1899,7 +1886,7 @@
     const userAnswer = selectedOption.getAttribute('data-option'); // 선택한 옵션의 번호 (1, 2, 3...)
 
     if(Array.isArray(q.answer) && q.answer.length > 1) {
-      /* 복수 선택 로직 */
+      /* 복수 선택 로직 - 기존과 동일하게 유지 */
       if(selectedOptions.includes(userAnswer)) {
         selectedOptions = selectedOptions.filter(opt => opt !== userAnswer);
         selectedOption.classList.remove("selected");
@@ -1912,16 +1899,11 @@
       const confirmBtn = document.getElementById('checkButton');
       if(confirmBtn) { confirmBtn.disabled = (selectedOptions.length === 0); }
     } else {
-      /* 단일 선택 로직 - 바로 정답 확인 */
+      /* 단일 선택 로직 - 휘매쓰 학습용 방식으로 수정 */
       answerSubmitted = true;
-      let isCorrect;
-
-      // q.answer가 배열일 수도, 단일 값일 수도 있음을 고려
-      if (Array.isArray(q.answer)) {
-          isCorrect = (userAnswer === q.answer[0].toString());
-      } else {
-          isCorrect = (userAnswer === q.answer.toString());
-      }
+      
+      // 답안 비교 로직 수정
+      const isCorrect = userAnswer === String(q.answer);
 
       if(isCorrect) {
         /* 정답인 경우 */
@@ -1931,13 +1913,6 @@
       } else {
         /* 오답인 경우 */
         selectedOption.classList.add("incorrect");
-        remainingChances--;
-        updateChancesDisplay();
-
-        if(remainingChances <= 0) {
-          setTimeout(() => { endGame(false); }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--feedback-delay')));
-          return;
-        }
       }
 
       /* 사용자 답변 기록 */
@@ -1965,15 +1940,17 @@
 
     /* 정답 확인 */
     let allCorrect = true;
-    const correctAnswers = q.answer.map(String);
-    const userAnswersStr = selectedOptions.map(String);
+    // q.answer가 항상 배열이라고 가정 (복수 선택 문제이므로)
+    const correctAnswers = q.answer.map(String); // Ensure correct answers are strings
+    const userAnswersStr = selectedOptions.map(String); // Ensure user answers are strings
 
     /* 선택한 개수와 정답 개수가 다르면 오답 */
     if(userAnswersStr.length !== correctAnswers.length) {
         allCorrect = false;
     } else {
+      // Check if every selected answer is in the correct answers array and vice-versa
       allCorrect = userAnswersStr.every(ans => correctAnswers.includes(ans)) &&
-                   correctAnswers.every(ans => userAnswersStr.includes(ans));
+                   correctAnswers.every(ans => userAnswersStr.includes(ans)); // Ensure both ways match
     }
 
     /* 옵션별 정답/오답 표시 */
@@ -1982,29 +1959,21 @@
       const isSelected = userAnswersStr.includes(optVal);
       const isCorrectAnswer = correctAnswers.includes(optVal);
 
-      if(isSelected) {
+      if(isSelected) { // 사용자가 선택한 옵션에 대해서만 피드백
         if(isCorrectAnswer) {
-          opt.classList.add("correct");
+          opt.classList.add("correct"); // 선택했고 정답이면 초록색
         } else {
-          opt.classList.add("incorrect");
+          opt.classList.add("incorrect"); // 선택했고 오답이면 빨간색
         }
       }
-      opt.style.pointerEvents = 'none';
+
+      opt.style.pointerEvents = 'none'; // Disable further clicks
     });
 
     if(allCorrect) {
       /* 모두 정답인 경우 */
       score += q.score || defaultScore;
       elements.currentScore.textContent = score;
-    } else {
-      /* 오답인 경우 */
-      remainingChances--;
-      updateChancesDisplay();
-
-      if(remainingChances <= 0) {
-        setTimeout(() => { endGame(false); }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--feedback-delay')));
-        return;
-      }
     }
 
     /* 확인 버튼 비활성화, 다음 버튼 활성화 */
@@ -2015,7 +1984,7 @@
     /* 사용자 답변 기록 */
     userAnswers.push({
       questionId: q.id,
-      userAnswer: selectedOptions,
+      userAnswer: selectedOptions, // Keep original format (array of strings)
       correctAnswer: q.answer,
       isCorrect: allCorrect,
       score: allCorrect ? (q.score || defaultScore) : 0
@@ -2050,52 +2019,43 @@
     let isCorrectOverall = true;
     let userAnswerArray = [];
 
-    /* 각 입력 필드별 정답 확인 */
+    /* 각 입력 필드별 정답 확인 - 휘매쓰 학습용 방식으로 수정 */
     inputs.forEach((input, index) => {
-      const userAns = input.value.trim().toLowerCase().replace(/\s+/g, '');
-      userAnswerArray.push(input.value.trim());
+        const userAns = input.value.trim();
+        userAnswerArray.push(userAns);
 
-      let correctAnsNormalized = "";
-      const correctAnsRaw = Array.isArray(q.answer) ? q.answer[index] : q.answer;
-
-      if (correctAnsRaw !== undefined && correctAnsRaw !== null) {
-           correctAnsNormalized = correctAnsRaw.toString().trim().toLowerCase().replace(/\s+/g, '');
-      }
-
-      if(userAns !== correctAnsNormalized) {
-        isCorrectOverall = false;
-        input.classList.add('incorrect');
-      } else {
-        input.classList.add('correct');
-      }
-      input.readOnly = true;
+        const correctAns = Array.isArray(q.answer) ? String(q.answer[index]) : String(q.answer);
+        
+        if(userAns !== correctAns) {
+            isCorrectOverall = false;
+            input.classList.add('incorrect');
+        } else {
+            input.classList.add('correct');
+        }
+        input.readOnly = true;  // 입력 필드 비활성화
     });
 
     if(isCorrectOverall) {
-      /* 정답인 경우 */
-      score += q.score || defaultScore;
-      elements.currentScore.textContent = score;
-    } else {
-      /* 오답인 경우 */
-      remainingChances--;
-      updateChancesDisplay();
-
-      if(remainingChances <= 0) {
-        setTimeout(() => { endGame(false); }, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--feedback-delay')));
-        return;
-      }
+        /* 정답인 경우 */
+        score += q.score || defaultScore;
+        elements.currentScore.textContent = score;
     }
 
-    /* 다음 버튼 활성화 */
+    /* 다음 버튼 활성화, 확인 버튼 비활성화 */
     elements.nextButton.disabled = false;
+    const checkButton = document.getElementById('checkButton');
+    if(checkButton) {
+        checkButton.disabled = true;
+        checkButton.style.pointerEvents = 'none';  // 클릭 이벤트도 완전히 차단
+    }
 
     /* 사용자 답변 기록 */
     userAnswers.push({
-      questionId: q.id,
-      userAnswer: userAnswerArray,
-      correctAnswer: q.answer,
-      isCorrect: isCorrectOverall,
-      score: isCorrectOverall ? (q.score || defaultScore) : 0
+        questionId: q.id,
+        userAnswer: userAnswerArray,
+        correctAnswer: q.answer,
+        isCorrect: isCorrectOverall,
+        score: isCorrectOverall ? (q.score || defaultScore) : 0
     });
   }
 
@@ -2204,6 +2164,7 @@
         game: game,
         name: player,
         score: parseInt(finalScoreValue, 10),
+        maxScore: questions.length * 10, // 만점 정보 추가
         elapsedTime: parseInt(finalElapsedTimeValue, 10)
       };
 
@@ -2270,6 +2231,6 @@
     // Set initial state for chance indicators
     updateChancesDisplay();
   };
-  </script>
+ </script>
 </body>
 </html>
